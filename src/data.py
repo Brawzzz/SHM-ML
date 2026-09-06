@@ -8,18 +8,28 @@ import pandas as pd
 import pickle as pkl
 import matplotlib.pyplot as plt
 
+from tqdm import tqdm
 from sklearn.preprocessing import MinMaxScaler
 
-#================================================================================#
+import setup as stp
+
+
+#============================================================================================================================#
+#--------------------------------------------------------- FUNCTION ---------------------------------------------------------#
+#============================================================================================================================#
 def explore_file(file_path: str) -> dict:
 
     """
-    explore file content based on the file extension.
+    Explore file content based on the file extension.
     Supported formats: (.csv, .xlsx, .pickle, .pkl, .json)
     
-    :params file_path: path to the file to explore
+    Parameters
+    ----------
+    file_path : path to the file to explore
 
-    :return datas: dictionnary containing: 'format', 'data' and 'metadata'
+    Returns
+    ----------
+    datas : dictionnary containing: 'format', 'data' and 'metadata'
     """
 
     #---------------------------------------------
@@ -27,7 +37,7 @@ def explore_file(file_path: str) -> dict:
         print(f"No such file or directory: '{file_path}'")
         return datas
 
-    #---------------------------------------------
+    #------------------------------
     datas = {
         'format': None,
         'data': None, 
@@ -37,16 +47,16 @@ def explore_file(file_path: str) -> dict:
     extension       = os.path.splitext(file_path)[1].lower()
     datas['format'] = extension
 
-    #---------------------------------------------
+    #------------------------------
     try:
 
-        #-------------------------
+        #---------------
         if extension == '.csv':
 
             datas['data']       = pd.read_csv(file_path)
             datas['metadata']   = {'source': 'csv'}
 
-        #-------------------------
+        #---------------
         elif extension in ['.xlsx', '.xls']:
 
             xls       = pd.ExcelFile(file_path)
@@ -55,37 +65,37 @@ def explore_file(file_path: str) -> dict:
             datas['data']       = pd.read_excel(file_path, sheet_name=tab_0)
             datas['metadata']   = {'sheet_names': xls.sheet_names, 'extracted_sheet': tab_0}
 
-        #-------------------------
+        #---------------
         elif extension in ['.pickle', '.pkl']:
 
             with open(file_path, 'rb') as f:
                 raw_data = pkl.load(f)
 
-            #---------------
+            #----------
             datas['data']   = raw_data
             metadata        = {'type': type(raw_data).__name__}
 
-            #---------------
+            #----------
             if isinstance(raw_data, pd.DataFrame):
                 metadata['shape'] = raw_data.shape
 
-            #---------------
+            #----------
             elif isinstance(raw_data, dict):
                 metadata['keys'] = list(raw_data.keys())
 
-            #---------------
+            #----------
             elif hasattr(raw_data, 'shape'):
                 metadata['shape'] = raw_data.shape
                 
             datas['metadata'] = metadata
 
-        #------------------------- 
+        #--------------- 
         elif extension == '.json':
 
             with open(file_path, 'r', encoding='utf-8') as f:
                 raw_data = json.load(f)
 
-            #---------------
+            #----------
             if isinstance(raw_data, (dict, list)):
 
                 try:
@@ -99,14 +109,14 @@ def explore_file(file_path: str) -> dict:
                     datas['data']       = raw_data
                     datas['metadata']   = {'type': type(raw_data).__name__}
 
-        #-------------------------
+        #---------------
         else:
             print(f"extension not supported : '{extension}'")
             return datas
 
         return datas
 
-    #---------------------------------------------
+    #------------------------------
     except Exception as e:
         print(f"Error while processing file : {e}")
         return datas
@@ -115,9 +125,11 @@ def explore_file(file_path: str) -> dict:
 def display_data(datas : dict) -> None:
 
     """
-    display theb datas and the metadatas collected from explore_file() function
+    Display theb datas and the metadatas collected from explore_file() function
     
-    :params datas: dictionnart containing the datas, obtained with explore_file() function
+    Parameters
+    ----------
+    datas : dictionnart containing the datas, obtained with explore_file() function
     """
 
     #---------------------------------------------  
@@ -125,12 +137,12 @@ def display_data(datas : dict) -> None:
         print("Erreur : Le résultat fourni est vide ou invalide.")
         return
 
-    #--------------------------------------------- 
+    #------------------------------ 
     print("\n" + "="*60)
     print(f"EXPLORATION (Format : {datas.get('format').upper()})")
     print("="*60)
 
-    #--------------------------------------------- 
+    #------------------------------ 
     print("\nMETADATAS :")
     metadata = datas.get('metadata', {})
 
@@ -141,10 +153,11 @@ def display_data(datas : dict) -> None:
         for key, value in metadata.items():
             print(f"   {str(key).capitalize():<15} : {value}")
 
-    #---------------
+    #------------------------------
     print("\nDATAS :")
     data = datas.get('data')
 
+    #---------------
     if data is None:
         print("   (Aucune donnée brute extraite)")
     
@@ -210,240 +223,106 @@ def display_data(datas : dict) -> None:
     print("="*60 + "\n")
 
 #================================================================================#
-def valid_signals(df, ref_size) -> np.ndarray:
+def UTAH_data(data_files : list, path_index : int = 3):
 
     """
-    Extract valid signals from a DataFrame based on a 
-    reference size and return the first valid signal found.
-
-    :param df:          DataFrame containing the signals.
-    :param ref_size:    Reference size for the signals.
-    """
-
-    #---------------------------------------------
-    found_signals = []
+    Extraction and prepration of the datas from UTHA university 
     
-    for col in df.columns:
+    Parameters
+    ----------
+    data_file   : list of paths for the data file (file format : measurements_20xx_xx.pickle)
+    path_index  : index of th sensor to analyse (exemple : 3 --> path 5-4)
 
-        serie = pd.to_numeric(df[col].iloc[1:], errors='coerce').dropna().values
-    
-        if(len(serie) >= ref_size and min(serie) < 0):
-            found_signals.append(serie[:ref_size])
-
-    #---------------
-    if len(found_signals) == 3:
-        return(found_signals[1])
-
-    elif len(found_signals) > 0:
-        return (found_signals[0])
-        
-    return None 
-
-#================================================================================#
-def build_dataset():
-
-    signals_X   = []
-    labels_y    = [] 
-    
-    #---------------- Baseline data extraction (Crackless) ----------------#
-    baseline_file = "./data/cracks/Crackless.xlsx"
-
-    if os.path.exists(baseline_file):
-
-        print(f"Processing {baseline_file}")
-
-        df_baseline     = pd.read_excel(baseline_file, sheet_name=0)
-        baseline_amp    = pd.to_numeric(df_baseline.iloc[1:, 1], errors='coerce').dropna().values
-
-        REF_SIZE = len(baseline_amp)
-
-        signals_X.append(baseline_amp)
-        labels_y.append([0.0, 0.0])
-    
-    #------------------------ Crack data extraction -----------------------#
-    crack_depths = {"0.5mm": 0.5, "0.8mm": 0.8, "1mm": 1.0, "1.6mm": 1.6}
-    crack_files  = {"./data/cracks/L10.xlsx": 10.0, 
-                    "./data/cracks/L20.xlsx": 20.0,
-                    "./data/cracks/L30.xlsx": 30.0,
-                    "./data/cracks/L50.xlsx": 50.0,
-                    "./data/cracks/L70.xlsx": 70.0,}
-
-    #---------------------------------------------
-    for file, length in crack_files.items():
-
-        if os.path.exists(file):
-
-            print(f"Processing {file}")
-            
-            for tab, deepth in crack_depths.items():
-
-                #---------------
-                try:
-
-                    df_crack    = pd.read_excel(file, sheet_name=tab)
-                    crack_amp   = valid_signals(df_crack, REF_SIZE)
-
-                    #---------------
-                    if crack_amp is not None:
-
-                        signals_X.append(crack_amp)
-                        labels_y.append([length, deepth])
-
-                    else:
-                        print(f"Failed {tab} no signals found")
-                
-                except ValueError:
-                    print(f"Tab {tab} not found in {file}")
-                    
-    #---------------------------------------------
-    X = np.array(signals_X)
-    y = np.array(labels_y)
-    
-    print("\nDataset construction completed")
-    print(f"-> Forme de X (Signaux) : {X.shape} (Expériences x Échantillons temporels)")
-    print(f"-> Forme de y (Labels)  : {y.shape} (Expériences x [Longueur, Profondeur])")
-    
-    return X, y
-
-
-#================================================================================#
-def display_datasets(X : np.ndarray, y : np.ndarray):
-
-    """
-    Display the dataset signals with their corresponding labels.
+    Returns
+    ----------
+    X_train     : healthy dataset 
+    X_test      : cracks dataset, 
+    scaler      : scaler tools used for training phase  
+    cracks_info : damage caracteristics
     """
 
     #---------------------------------------------
-    plt.figure(figsize=(12, 6))
+    if not data_files:
+        print(f"data_files is empty : {data_files}")
+        return(None, None, None, None)
 
-    plt.plot(X[0], label='Plaque Saine (0mm)', color='green', linewidth=2)
-
-    #---------------
-    idx_l10 = np.where((y[:, 0] == 10.0) & (y[:, 1] == 1.6))[0]
-    if len(idx_l10) > 0:
-        plt.plot(X[idx_l10[0]], label='Fissure 10mm (1.6mm prof.)', color='orange', linestyle='--')
-
-    idx_l20 = np.where((y[:, 0] == 20.0) & (y[:, 1] == 1.6))[0]
-    if len(idx_l20) > 0:
-        plt.plot(X[idx_l20[0]], label='Fissure 20mm (1.6mm prof.)', color='red', linestyle='-.')
-
-    #---------------
-    plt.title("Visualisation du Dataset : Comparaison des signaux (Trajet MID)", fontsize=14)
-    plt.xlabel("Échantillons (Temps)", fontsize=12)
-    plt.ylabel("Amplitude", fontsize=12)
-    plt.legend()
-    plt.grid(True, linestyle=':', alpha=0.6)
-    plt.tight_layout()
-
-    plt.show()
-
-#================================================================================#
-def baseline_data(baseline_file="./data/Crackless.xlsx"):
-
-    """
-    healty data extrction for AE training.
-
-    :params baseline_file: path to the baseline data file
-    """
-
-    #---------------------------------------------------------
-    if not os.path.exists(baseline_file):
-
-        print(f"ERROR : {baseline_file} no such file or directory")
-        return(None, None)
-
-    #---------------------------------------------------------
-    healthy_signals = []
-    df_healty       = pd.read_excel(baseline_file, sheet_name=0)
-    cols_idx        = [1, 3, 5] 
+    valid_files = [file for file in data_files if os.path.exists(file)]
     
-    for col in cols_idx:
-        
-        signal = pd.to_numeric(df_healty.iloc[1:, col], errors='coerce').dropna().values
-        healthy_signals.append(signal)
-        
-    ref_size    = len(healthy_signals[0])
-    signals     = [sig[:ref_size] for sig in healthy_signals if len(sig) >= ref_size]
-    X_train     = np.array(signals)
+    if not valid_files:
+        print("None valid files")
+        return(None, None, None, None)
 
-    #---------------------------------------------------------
-    scaler              = MinMaxScaler()
-    X_train_normalise   = scaler.fit_transform(X_train)
-    
-    return(X_train_normalise, scaler)
+    #------------------------------
+    healthy_signals   = []
+    cracks_signals    = []
+    cracks_info       = []
 
-#================================================================================#
-def cracks_data(crack_file, scaler, ref_size=668):
+    pbar = tqdm(range(len(valid_files)), desc="Loading UTAH datas", unit="files")
 
-    """
-    cracks signal extraction and normalisation.
+    for file in valid_files:
 
-    :params crack_file: path tho the cracks datas file
-    :params scaler:     scaler used for baselin data normalisation
-    :ref_size:          reference size for valid signals
-
-    :retrun X_test_normalise: noramlise cracks data
-    :return signals_datas: information on the valid signals 
-    """
-
-    #---------------------------------------------------------
-    cracks_signals  = []
-    signals_datas   = []
-    tabs            = ["0.5mm", "0.8mm", "1mm", "1.6mm"]
-
-    #---------------------------------------------------------
-    for file in crack_file:
-
-        #-------------------------
         if not os.path.exists(file):
             print(f"No such file or directory : {file}")
             continue
-
-        #-------------------------
-        for tab_i in tabs:
             
-            try:
+        with open(file, 'rb') as f:
+            dataset = pkl.load(f)
 
-                df  = pd.read_excel(file, sheet_name=tab_i)
+        #---------------
+        signals = dataset['guided wave']
+        damages = dataset['damage tag']
+        weather = dataset['weather tag']
+        temps   = dataset['temperature']
 
-                valid_signal = None
+        #---------------
+        idx_healty = np.where(damages == 0)[0]
 
-                #-------------------------
-                for col in df.columns[1:]: 
-                    
-                    serie = pd.to_numeric(df[col].iloc[1:], errors='coerce').dropna().values
+        for i in idx_healty:
+            healthy_signals.append(signals[i, path_index, :])
 
-                    if len(serie) >= ref_size - 20 and min(serie) < 0:
-                        
-                        #---------------
-                        if len(serie) < ref_size:
-                            lack    = ref_size - len(serie)
-                            serie   = np.pad(serie, (0, lack), 'constant')
-                            
-                        #---------------
-                        valid_signal = serie[:ref_size]
-                        break
+        #---------------
+        idx_fissures = np.where(damages > 0)[0]
 
-                #-------------------------
-                if valid_signal is not None:
+        for i in idx_fissures:
 
-                    cracks_signals.append(valid_signal)
-                    signals_datas.append(f"{file} - Depth {tab_i}")
+            cracks_signals.append(signals[i, path_index, :])
 
-                #-------------------------
-                else:
-                    print(f" no valid signals in {file} ({tab_i})")
+            context = f"Damge D{damages[i]} | Weather : {weather[i]} | Temp: {temps[i]:.1f}°C"
+            cracks_info.append(context)
 
-            except ValueError:
-                print(f"  ⚠️ Onglet {tab_i} introuvable dans {file}")
-                
-    #---------------------------------------------------------
-    X_test = np.array(cracks_signals)
-    
-    if len(X_test) == 0:
-        print(f"no cracks found")
-        return None, None
+        #---------------
+        pbar.update(1)
 
-    X_test_normalise = scaler.transform(X_test)
-    
-    return(X_test_normalise, signals_datas)
+    pbar.close()
+
+    #---------------------------------------------
+    print(f"\nhealthy / cracks signals extraction ...", end="", flush=True)
+
+    X_train_raw = np.array(healthy_signals)
+    X_test_raw  = np.array(cracks_signals)
+
+    print(f"Done\n")
+
+    print(f" -> healthy signals extracted \t: {len(X_train_raw)}")
+    print(f" -> crack signals extracted \t: {len(X_test_raw)}\n")
+
+    #---------------
+    scaler = MinMaxScaler()
+
+    X_train = scaler.fit_transform(X_train_raw)
+
+    if len(X_test_raw) > 0:
+        X_test = scaler.transform(X_test_raw)
+    else:
+        X_test = np.empty((0, X_train_raw.shape[1]))
+        
+    return(X_train, X_test, scaler, cracks_info)
+
+
+#============================================================================================================================#
+#----------------------------------------------------------- MAIN -----------------------------------------------------------#
+#============================================================================================================================#
+if __name__ == "__main__":
+
+    file        = stp.DATAS_DIR + "measurements_2022_06.pickle"
+    dict_data   = explore_file(file)
