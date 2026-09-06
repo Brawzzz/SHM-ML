@@ -57,7 +57,7 @@ def save_model(model, scaler: TransformerMixin, n_threshold : float, n_train_los
     print(f"Done")
 
     #------------------------------
-    config_path = os.path.join(stp.MODELS_DIR, f"{base_name}_config.json")
+    config_path = os.path.join(stp.MODELS_DIR, f"{base_name}_metadatas.json")
     config_data = {
         "training_losses": n_train_losses.tolist() if isinstance(n_train_losses, np.ndarray) else n_train_losses,
         "warning_threshold": float(n_threshold),
