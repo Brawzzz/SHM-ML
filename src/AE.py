@@ -173,7 +173,7 @@ def AE_train(X_uncrack: np.ndarray, X_crack: np.ndarray) -> tuple[nn.Module, flo
     warning_threshold = np.mean(healthy_mse) + 3 * np.std(healthy_mse)
     print(f"\nWarning threshold set at  : {warning_threshold:.5f}")
 
-    return(model, warning_threshold, crack_recon, train_losses)
+    return(model, warning_threshold, crack_recon, train_losses, healthy_mse, crack_mse)
 
 #================================================================================#
 def AE_plot(X_crack: np.ndarray, 

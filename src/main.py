@@ -7,62 +7,13 @@ import numpy as np
 
 from sklearn.model_selection import train_test_split
 
-import CAE
+import AE
 
 import data
 import tools 
 import setup as stp
 
 
-#============================================================================================================================#
-#-------------------------------------------------------- FUNCTION ----------------------------------------------------------#
-#============================================================================================================================#
-def run_training(n_X_train : np.ndarray, n_X_test : np.ndarray, model : str = "CAE") -> tuple[torch.nn.Module, float, np.ndarray, np.ndarray]:
-
-    """
-    launch the training phase of a model depending on his type  
-
-        - Auto Encodeur (AE : default) 
-        - Convolutional Auto Encodeur (CAE)  
-
-    Parameters
-    ----------
-    n_X_train : train dataset
-    n_X_test  : test dataset
-    model    : str describing the model's type (default : AE)
-
-    Returns
-    ----------
-    model        : trained model 
-    threshold    : anomalies threshold
-    recons       : inputs reconstruction 
-    train_losses : training losses 
-    """
-
-    #---------------------------------------------
-    if not (len(n_X_train) > 0 and len(n_X_test) > 0):
-        print(f"datasets are empty : {len(n_X_train)}, {len(n_X_test)}")
-        return(None, None, None)
-
-    #-------------------------
-    if model == "AE":
-
-        (AE_model, AE_threshold, AE_recons) = AE.AE_train(X_uncrack=n_X_train, X_crack=n_X_test)
-
-        return(AE_model, AE_threshold, AE_recons)
-
-    #-------------------------
-    elif model == "CAE":
-
-        (CAE_model, CAE_threshold, CAE_recons, CAE_train_losses, CAE_healthy_mse, CAE_crack_mse) = CAE.CAE_train(X_uncrack=n_X_train, X_crack=n_X_test)
-
-        return(CAE_model, CAE_threshold, CAE_recons, CAE_train_losses, CAE_healthy_mse, CAE_crack_mse)
-
-    #-------------------------
-    else:
-        print(f"model type : {model} not recognized") 
-
-    
 #============================================================================================================================#
 #---------------------------------------------------------- MAIN ------------------------------------------------------------#
 #============================================================================================================================#
@@ -78,7 +29,11 @@ if __name__ == '__main__':
 
         (X_train, X_test, scaler, labels_test) = data.UTAH_data(stp.UTAH_FILES, path_index=3)
 
-        (model, threshold, recons, train_losses, healthy_mse, crack_mse) = run_training(n_X_train=X_train, n_X_test=X_test, model=stp.MODEL)
+        training_outputs = AE.AE_train(X_uncrack=X_train, X_crack=X_test)
+
+        (model, train_losses)    = training_outputs[0], training_outputs[3]
+        (threshold, recons)      = training_outputs[1], training_outputs[2]
+        (healthy_mse, crack_mse) = training_outputs[4], training_outputs[5]
 
         #---------------------------------------------
         test_idx = 2
