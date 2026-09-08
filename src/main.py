@@ -38,20 +38,19 @@ if __name__ == '__main__':
         #---------------------------------------------
         test_idx = 2
 
-        AE.AE_plot(
-            X_crack             = X_test, 
-            crack_recon         = recons, 
-            warning_threshold   = threshold, 
-            index_to_plot       = test_idx
-        )
-        print(f"Current cracks infos : {labels_test[test_idx]}")
-
+        # AE.AE_plot(
+        #     X_crack             = X_test, 
+        #     crack_recon         = recons, 
+        #     warning_threshold   = threshold, 
+        #     index_to_plot       = test_idx
+        # )
+        # print(f"Current cracks infos : {labels_test[test_idx]}")
+        
         tools.save_model(model, 
                          scaler,
                          n_threshold=threshold,
                          n_train_losses=train_losses,
                          model_name=stp.MODEL_NAME)
-
         
         np.savez_compressed(f"./models/{stp.MODEL_NAME}_metrics.npz",
                             train_losses = train_losses,
@@ -65,4 +64,13 @@ if __name__ == '__main__':
         stp.set_config(config_data=stp.get_config(config_path=args.test))
 
     #---------------------------------------------
-    # if args.plot is not None:
+    if args.plot is not None:
+
+        metrics = np.load(args.plot)
+
+        tools.model_perf(
+            train_losses = metrics["train_losses"],
+            healthy_mse  = metrics["healthy_mse"],
+            crack_mse    = metrics["crack_mse"],
+            threshold    = metrics["threshold"]
+        )

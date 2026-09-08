@@ -100,7 +100,7 @@ def AE_train(X_uncrack: np.ndarray, X_crack: np.ndarray) -> tuple[nn.Module, flo
     (X_train, X_val) = train_test_split(X_uncrack, test_size=0.2, random_state=42)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"-> Training set on : {device}")
+    print(f"-> Training set on : {device} \n")
 
     #------------------------------
     tensor_train = torch.tensor(X_train, dtype=torch.float32)
