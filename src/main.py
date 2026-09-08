@@ -39,15 +39,15 @@ if __name__ == '__main__':
         (healthy_mse, crack_mse) = training_outputs[4], training_outputs[5]
 
         #---------------------------------------------
-        test_idx = 2
+        # test_idx = 2
 
-        CAE.CAE_plot(
-            X_crack             = X_test, 
-            crack_recon         = recons, 
-            warning_threshold   = threshold, 
-            index_to_plot       = test_idx
-        )
-        print(f"Current cracks infos : {labels_test[test_idx]}")
+        # CAE.CAE_plot(
+        #     X_crack             = X_test, 
+        #     crack_recon         = recons, 
+        #     warning_threshold   = threshold, 
+        #     index_to_plot       = test_idx
+        # )
+        # print(f"Current cracks infos : {labels_test[test_idx]}")
 
         tools.save_model(model, scaler, model_name=stp.MODEL_NAME)
 
@@ -60,22 +60,32 @@ if __name__ == '__main__':
     #---------------------------------------------
     elif args.test is not None:
 
-        # stp.set_config(config_data=stp.get_config(config_path=args.test))
+        stp.set_config(config_data=stp.get_config(config_path=args.test))
 
-        model = tools.load_model(model_path   = "./models/CAE_UTAH_shm.pth",
-                                 model_type   = "PyTorch",
-                                 model_class  = CAE.ConvAutoEncoder,
-                                 scaler_path  = "./models/CAE_UTAH_shm_scaler.pkl",
-                                 model_kwargs = {"signal_length": 2000})
+        # model = tools.load_model(model_path   = "./models/CAE_UTAH_shm.pth",
+        #                          model_type   = "PyTorch",
+        #                          model_class  = CAE.ConvAutoEncoder,
+        #                          scaler_path  = "./models/CAE_UTAH_shm_scaler.pkl",
+        #                          model_kwargs = {"signal_length": 2000})
 
         
-        signal      = X_test[args.test]
-        threshold   = 1.0560758859483052e-05
+        # signal      = X_test[args.test]
+        # threshold   = 1.0560758859483052e-05
 
-        (recons, erreurs, diagnostic) = CAE.CAE_inference(model, X_input=signal, n_threshold=threshold)
-
-    else:
-        print(f"No command found")
+        # (recons, erreurs, diagnostic) = CAE.CAE_inference(model, X_input=signal, n_threshold=threshold)
 
     #---------------------------------------------
-    # if args.plot is not None:
+    elif args.plot is not None:
+
+        metrics = np.load(args.plot)
+
+        tools.model_perf(
+            train_losses = metrics["train_losses"],
+            healthy_mse  = metrics["healthy_mse"],
+            crack_mse    = metrics["crack_mse"],
+            threshold    = metrics["threshold"]
+        )
+
+    #---------------------------------------------
+    # else :
+    #   print(f"No command found")

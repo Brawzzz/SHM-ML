@@ -10,10 +10,10 @@ import numpy as np
 import argparse as ap
 import seaborn as sns
 import matplotlib.pyplot as plt
+import sklearn.metrics
 
 from datetime import datetime
 from sklearn.base import TransformerMixin
-from sklearn.metrics import confusion_matrix
 
 import setup as stp
 
@@ -188,13 +188,13 @@ def learning_curve(axes, train_losses: list) -> None:
 
     #---------------------------------------------
     axes[0].plot(train_losses, label='Train Loss (MSE)', color='blue', linewidth=2)
-    axes[0].set_title('Courbe d\'apprentissage du CAE', fontsize=14)
-    axes[0].set_xlabel('Époques (Epochs)')
-    axes[0].set_ylabel('Erreur de reconstruction (MSE)')
+    axes[0].set_title('Learning Curve', fontsize=14)
+    axes[0].set_xlabel('Epochs')
+    axes[0].set_ylabel('Reconstruction Error (MSE)')
     axes[0].legend()
 
 #================================================================================#
-def confusion_matrix(axes, healthy_mse, crack_mse, threshold) -> None:
+def conf_matrix(axes, healthy_mse, crack_mse, threshold) -> None:
 
     """
     Plot the confusion matrix based on the healthy / cracked MSE values and the threshold.
@@ -206,11 +206,11 @@ def confusion_matrix(axes, healthy_mse, crack_mse, threshold) -> None:
     all_mse = np.concatenate([healthy_mse, crack_mse])
     y_pred = (all_mse > threshold).astype(int)
     
-    CM = confusion_matrix(y_true, y_pred)
+    CM = sklearn.metrics.confusion_matrix(y_true, y_pred)
         
     sns.heatmap(CM, annot=True, fmt='d', cmap='Blues', ax=axes[2], 
-                xticklabels=['Sain Prédit', 'Fissure Prédite'], 
-                yticklabels=['Sain Réel', 'Fissure Réelle'])
+                xticklabels=['Predicted Healthy', 'Predicted Damaged'], 
+                yticklabels=['Real Healthy', 'Real Damaged'])
     
     axes[2].set_title('Matrice de Confusion', fontsize=14)
 
@@ -229,13 +229,15 @@ def error_distribution(axes, healthy_mse, crack_mse, threshold) -> None:
     """
 
     #---------------------------------------------
-    sns.histplot(healthy_mse, bins=50, color='green', alpha=0.6, label='Sains (Validation)', ax=axes[1], stat='density')
-    sns.histplot(crack_mse, bins=50, color='red', alpha=0.6, label='Fissures (Test)', ax=axes[1], stat='density')
-    
-    axes[1].axvline(threshold, color='black', linestyle='dashed', linewidth=2, label=f'Seuil d\'alerte')
-    axes[1].set_title('Séparation des erreurs de reconstruction', fontsize=14)
-    axes[1].set_xlabel('Erreur MSE')
-    axes[1].set_ylabel('Densité')
+    sns.histplot(healthy_mse, bins=50, color='green', alpha=0.6, label='Healthy (Validation)', ax=axes[1], stat='count')
+    sns.histplot(crack_mse, bins=50, color='red', alpha=0.6, label='Damaged (Test)', ax=axes[1], stat='count')
+
+    # axes[1].set_yscale('log')
+
+    axes[1].axvline(threshold, color='black', linestyle='dashed', linewidth=2, label=f'Warning threshold')
+    axes[1].set_title('Reconstruction error separation', fontsize=14)
+    axes[1].set_xlabel('MSE Error')
+    axes[1].set_ylabel('Number of signal')
     axes[1].legend()
 
 
@@ -263,7 +265,7 @@ def model_perf(train_losses : list,
     #-----------------------------------
     learning_curve(axes, train_losses)
     error_distribution(axes, healthy_mse, crack_mse, threshold)
-    confusion_matrix(axes, healthy_mse, crack_mse, threshold)
+    conf_matrix(axes, healthy_mse, crack_mse, threshold)
 
     #-----------------------------------
     plt.tight_layout()

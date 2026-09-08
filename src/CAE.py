@@ -81,50 +81,28 @@ class ConvAutoEncoder(nn.Module):
 def safe_predict(model: nn.Module, 
                  tensor_cpu: torch.Tensor, 
                  device: torch.device, 
-                 batch_size: int = 256) -> torch.Tensor:
-
+                 batch_size: int = 128) -> torch.Tensor:
     """
-    Evaluate a tensor and switch automatically to batch processing if's fulling the VRAM.
+    Evaluate a tensor using systematic batch processing to prevent VRAM saturation.
 
-    Parameters
+    Parameters 
     ----------
-    model       : The neural network model
-    tensor_cpu  : The input tensor on CPU
-    device      : The device to move the tensor to
-    batch_size  : The size of each batch
 
-    Returns
-    -------
-    torch.Tensor : The reconstructed tensor on CPU
     """
-
     #---------------------------------------------
-    try:
-        tensor_gpu = tensor_cpu.to(device)
-        recon_gpu  = model(tensor_gpu)
-        return recon_gpu.cpu()
-        
-    except RuntimeError as e:
+    model.eval()
+    reconstructions = []
 
-        if "out of memory" in str(e).lower():
-
-            print("\nVRAM Saturation  -> Switching to batch processing ...", flush=True)
-            torch.cuda.empty_cache()
+    with torch.no_grad():
+        for i in range(0, len(tensor_cpu), batch_size):
+            batch = tensor_cpu[i : i + batch_size].to(device)
+            recon = model(batch)
+            reconstructions.append(recon.cpu())
             
-            reconstructions = []
-
-            for i in range(0, len(tensor_cpu), batch_size):
-
-                batch = tensor_cpu[i : i + batch_size].to(device)
-                recon = model(batch)
-                reconstructions.append(recon.cpu())
-                
-            return torch.cat(reconstructions, dim=0)
-        else:
-            raise e
+    return torch.cat(reconstructions, dim=0)
 
 #================================================================================#
-def CAE_train(X_uncrack: np.ndarray, X_crack: np.ndarray) -> tuple[nn.Module, float, np.ndarray, np.ndarray]:
+def CAE_train(X_uncrack: np.ndarray, X_crack: np.ndarray) -> tuple[nn.Module, float, np.ndarray, list, np.ndarray, np.ndarray]:
 
     """
     Convolutional Auto-Encoder training and evaluation function.
@@ -253,7 +231,10 @@ def CAE_train(X_uncrack: np.ndarray, X_crack: np.ndarray) -> tuple[nn.Module, fl
     return(model, warning_threshold, crack_recon, train_losses, healthy_mse, crack_mse)
 
 #================================================================================#
-def CAE_inference(model: nn.Module, X_input: np.ndarray, n_threshold: float, n_batch_size: int = 256) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def CAE_inference(model: nn.Module, 
+                  X_input: np.ndarray, 
+                  n_threshold: float, 
+                  n_batch_size: int = 256) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 
     """
     Inference phase on sigle or multiple input signals

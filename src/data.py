@@ -296,7 +296,7 @@ def UTAH_data(data_files : list, path_index : int = 3):
     pbar.close()
 
     #---------------------------------------------
-    print(f"\nhealthy / cracks signals extraction ...", end="", flush=True)
+    print(f"\nhealthy / cracks signals segmentation ...", end="", flush=True)
 
     X_train_raw = np.array(healthy_signals)
     X_test_raw  = np.array(cracks_signals)
