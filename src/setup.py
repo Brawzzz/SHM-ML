@@ -50,6 +50,7 @@ def get_config(config_path: str = CONFIG_PATH) -> dict:
     -------
     dict : dictionary containing the configuration parameters.
     """
+
     #---------------------------------------------
     if not os.path.exists(config_path):
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
@@ -69,33 +70,40 @@ def set_config(config_data : dict) -> None :
     ----------
     config_data : dictionary containing the configuration parameters.
     """
+
     #---------------------------------------------
-    global EPOCHS, BATCH_SIZE, LEARNING_RATE
+    global EPOCHS, BATCH_SIZE, LEARNING_RATE, LOSS_FUNCTION, OPTIMIZER
     global MODEL_NAME
 
     model           = config_data.get("model", {})
     hyperparameters = config_data.get("hyperparameters", {})
 
+    #------------------------------
+    MODEL_NAME      = model.get("name", "default_model")
+
     EPOCHS          = hyperparameters.get("epochs", 10)
     BATCH_SIZE      = hyperparameters.get("batch_size", 32)
     LEARNING_RATE   = hyperparameters.get("learning_rate", 0.001)
-
-    MODEL_NAME      = model.get("name", "default_model")
+    LOSS_FUNCTION   = hyperparameters.get("loss_function", "mse")
+    OPTIMIZER       = hyperparameters.get("optimizer", "adam")
 
 #================================================================================#
-def print_config(config_data : dict) -> None :
+def print_hyperparameters() -> None :
 
     """
     print configuration data from the configuration file
-
-    Parameters
-    ----------
-    config_data : dictionary containing the configuration parameters.
     """
+
     #---------------------------------------------
-    print("\n#---------- Current Configuration ----------#")
-    print(json.dumps(config_data, indent=4))
-    print("#--------------------------------------------#\n")
+    print("\n#----------- Configuration ------------#")
+
+    print(f"Epochs          : {EPOCHS}")
+    print(f"Batch size      : {BATCH_SIZE}")
+    print(f"learning rate   : {LEARNING_RATE}")
+    print(f"loss function   : {LOSS_FUNCTION}")
+    print(f"optimizer       : {OPTIMIZER}")
+
+    print("#--------------------------------------#\n")
 
 
 #============================================================================================================================#

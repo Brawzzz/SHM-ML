@@ -21,7 +21,7 @@ import setup as stp
 #============================================================================================================================#
 #--------------------------------------------------------- FUNCTION ---------------------------------------------------------#
 #============================================================================================================================#
-def save_model(model, scaler: TransformerMixin, n_threshold : float, n_train_losses: np.ndarray, model_name: str = "") -> None:
+def save_model(model, scaler: TransformerMixin, model_name: str = "") -> None:
 
     """
     Save a model (.keras for Keras, .pth for PyTorch) along with its scaler.
@@ -30,8 +30,6 @@ def save_model(model, scaler: TransformerMixin, n_threshold : float, n_train_los
     ----------
     model           : the model to save (Keras or PyTorch)
     scaler          : model's scaler tool
-    n_threshold     : threshold for damage detection
-    n_train_losses  : training losses
     model_name      : name of the model 
     """
 
@@ -47,29 +45,7 @@ def save_model(model, scaler: TransformerMixin, n_threshold : float, n_train_los
         base_name = f"{model_name}"
 
     #------------------------------
-    print(f"Saving model's scaler ...", end="", flush=True)
-
-    scaler_path = os.path.join(stp.MODELS_DIR, f"{base_name}_scaler.pkl")
-
-    with open(scaler_path, 'wb') as file:
-        pickle.dump(scaler, file)
-
-    print(f"Done")
-
-    #------------------------------
-    config_path = os.path.join(stp.MODELS_DIR, f"{base_name}_config.json")
-    config_data = {
-        "training_losses": n_train_losses.tolist() if isinstance(n_train_losses, np.ndarray) else n_train_losses,
-        "warning_threshold": float(n_threshold),
-        "model_type": "Keras" if isinstance(model, keras.Model) else "PyTorch",
-        "date_saved": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    
-    with open(config_path, 'w', encoding='utf-8') as f:
-        json.dump(config_data, f, indent=4)
-                                      
-    #------------------------------
-    print(f"Saving model ...", end="", flush=True)
+    print(f" -> Saving model ...", end="", flush=True)
 
     #---------------
     if(isinstance(model, keras.Model)):
@@ -88,6 +64,17 @@ def save_model(model, scaler: TransformerMixin, n_threshold : float, n_train_los
         print("Error model type not recognized")
 
     print(f"Done ({model_path})")
+
+    #------------------------------
+    print(f" -> Saving model's scaler ...", end="", flush=True)
+    
+    scaler_path = os.path.join(stp.MODELS_DIR, f"{base_name}_scaler.pkl")
+    
+    with open(scaler_path, 'wb') as file:
+        pickle.dump(scaler, file)
+    
+    print(f"Done ({scaler_path})")
+
 
 #================================================================================#
 def arg_parse() -> ap.Namespace:

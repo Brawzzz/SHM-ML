@@ -24,10 +24,13 @@ if __name__ == '__main__':
     #---------------------------------------------
     if args.train is not None:
 
-        stp.set_config(config_data=stp.get_config(config_path=args.train))
-        stp.UTAH_FILES = stp.UTAH_paths(nb_sample=stp.UTAH_FILES_SAMPLE)
+        config = stp.get_config(config_path=args.train)
 
-        (X_train, X_test, scaler, labels_test) = data.UTAH_data(stp.UTAH_FILES, path_index=3)
+        stp.set_config(config_data=config)
+        stp.print_hyperparameters()
+
+        stp.UTAH_FILES                          = stp.UTAH_paths(nb_sample=stp.UTAH_FILES_SAMPLE)
+        (X_train, X_test, scaler, labels_test)  = data.UTAH_data(stp.UTAH_FILES, path_index=3)
 
         training_outputs = CAE.CAE_train(X_uncrack=X_train, X_crack=X_test)
 
@@ -46,13 +49,8 @@ if __name__ == '__main__':
         )
         print(f"Current cracks infos : {labels_test[test_idx]}")
 
-        tools.save_model(model, 
-                         scaler,
-                         n_threshold=threshold,
-                         n_train_losses=train_losses,
-                         model_name=stp.MODEL_NAME)
+        tools.save_model(model, scaler, model_name=stp.MODEL_NAME)
 
-        
         np.savez_compressed(f"./models/{stp.MODEL_NAME}_metrics.npz",
                             train_losses = train_losses,
                             healthy_mse  = healthy_mse,
@@ -60,9 +58,24 @@ if __name__ == '__main__':
                             threshold    = threshold)
 
     #---------------------------------------------
-    if args.test is not None:
+    elif args.test is not None:
 
-        stp.set_config(config_data=stp.get_config(config_path=args.test))
+        # stp.set_config(config_data=stp.get_config(config_path=args.test))
+
+        model = tools.load_model(model_path   = "./models/CAE_UTAH_shm.pth",
+                                 model_type   = "PyTorch",
+                                 model_class  = CAE.ConvAutoEncoder,
+                                 scaler_path  = "./models/CAE_UTAH_shm_scaler.pkl",
+                                 model_kwargs = {"signal_length": 2000})
+
+        
+        signal      = X_test[args.test]
+        threshold   = 1.0560758859483052e-05
+
+        (recons, erreurs, diagnostic) = CAE.CAE_inference(model, X_input=signal, n_threshold=threshold)
+
+    else:
+        print(f"No command found")
 
     #---------------------------------------------
     # if args.plot is not None:

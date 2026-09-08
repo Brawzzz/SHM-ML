@@ -105,12 +105,16 @@ def safe_predict(model: nn.Module,
         return recon_gpu.cpu()
         
     except RuntimeError as e:
+
         if "out of memory" in str(e).lower():
+
             print("\nVRAM Saturation  -> Switching to batch processing ...", flush=True)
             torch.cuda.empty_cache()
             
             reconstructions = []
+
             for i in range(0, len(tensor_cpu), batch_size):
+
                 batch = tensor_cpu[i : i + batch_size].to(device)
                 recon = model(batch)
                 reconstructions.append(recon.cpu())
@@ -161,9 +165,26 @@ def CAE_train(X_uncrack: np.ndarray, X_crack: np.ndarray) -> tuple[nn.Module, fl
     #------------------------------
     signal_size = X_uncrack.shape[1]
     model       = ConvAutoEncoder(signal_size).to(device)
-    
-    criterion   = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=stp.LEARNING_RATE)
+
+    #------------------------------
+    if stp.LOSS_FUNCTION == "mse":
+        criterion   = nn.MSELoss()
+
+    elif stp.LOSS_FUNCTION == "bce":
+        criterion   = nn.BCELoss()
+
+    else:
+        criterion   = nn.MSELoss()
+
+    #------------------------------
+    if stp.OPTIMIZER == "adam":
+        optimizer   = optim.Adam(model.parameters(), lr=stp.LEARNING_RATE)
+
+    elif stp.OPTIMIZER == "sgd":
+        optimizer   = optim.SGD(model.parameters(), lr=stp.LEARNING_RATE)
+
+    else : 
+        optimizer   = optim.Adam(model.parameters(), lr=stp.LEARNING_RATE)
 
     print(f"Done\n")
     
@@ -230,6 +251,66 @@ def CAE_train(X_uncrack: np.ndarray, X_crack: np.ndarray) -> tuple[nn.Module, fl
     print(f"\nWarning threshold set at  : {warning_threshold:.5f}")
 
     return(model, warning_threshold, crack_recon, train_losses, healthy_mse, crack_mse)
+
+#================================================================================#
+def CAE_inference(model: nn.Module, X_input: np.ndarray, n_threshold: float, n_batch_size: int = 256) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+
+    """
+    Inference phase on sigle or multiple input signals
+
+    Parameters
+    ----------
+    model      : Trained CAE
+    X_input    : Input signals (NumPy array) => 1D / 2D (single / multiple signals).
+    threshold  : Warning threshold form training phase
+    batch_size : Size of batch in case of memory leak
+
+    Returns
+    ----------
+    recons      : Reconstruted signals of each input signals
+    mse_errors  : MSE error corresponding to the reconstructions errors of each input signals
+    anomalies   : boolean tab where 1 = Anomalie and 0 = Healthy).
+    """
+
+    #---------------------------------------------
+    model.eval()
+    
+    device = next(model.parameters()).device 
+    
+    if X_input.ndim == 1:
+        X_input = np.expand_dims(X_input, axis=0)
+        
+    tensor_input = torch.tensor(X_input, dtype=torch.float32).unsqueeze(1)
+
+    #------------------------------
+    with torch.no_grad():
+
+        try:
+            recon_tensor = model(tensor_input.to(device)).cpu()
+            
+        except RuntimeError as e:
+
+            if "out of memory" in str(e).lower():
+
+                torch.cuda.empty_cache()
+                print("\n[!] Batch inference (VRAM full)...")
+
+                recon_list = []
+
+                for i in range(0, len(tensor_input), n_batch_size):
+                    batch = tensor_input[i : i + n_batch_size].to(device)
+                    recon_list.append(model(batch).cpu())
+
+                recon_tensor = torch.cat(recon_list, dim=0)
+
+            else:
+                raise e
+                
+    recons      = recon_tensor.squeeze(1).numpy()
+    mse_errors  = np.mean(np.square(X_input - recons), axis=1)
+    anomalies   = (mse_errors > n_threshold).astype(int)
+    
+    return(recons, mse_errors, anomalies)
 
 #================================================================================#
 def CAE_plot(X_crack: np.ndarray, crack_recon: np.ndarray, warning_threshold: float, index_to_plot: int = 0) -> None:
