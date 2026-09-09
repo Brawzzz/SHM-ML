@@ -21,75 +21,6 @@ import setup as stp
 #============================================================================================================================#
 #--------------------------------------------------------- FUNCTION ---------------------------------------------------------#
 #============================================================================================================================#
-def save_model(model, scaler: TransformerMixin, n_threshold : float, n_train_losses: np.ndarray, model_name: str = "") -> None:
-
-    """
-    Save a model (.keras for Keras, .pth for PyTorch) along with its scaler.
-    
-    Parameters
-    ----------
-    model           : the model to save (Keras or PyTorch)
-    scaler          : model's scaler tool
-    n_threshold     : threshold for damage detection
-    n_train_losses  : training losses
-    model_name      : name of the model 
-    """
-
-    #---------------------------------------------
-    os.makedirs(stp.MODELS_DIR, exist_ok=True)
-
-    if model_name == "":
-
-        sufix = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        base_name = f"model_{sufix}"
-
-    else:
-        base_name = f"{model_name}"
-
-    #------------------------------
-    print(f"Saving model's scaler ...", end="", flush=True)
-
-    scaler_path = os.path.join(stp.MODELS_DIR, f"{base_name}_scaler.pkl")
-
-    with open(scaler_path, 'wb') as file:
-        pickle.dump(scaler, file)
-
-    print(f"Done")
-
-    #------------------------------
-    config_path = os.path.join(stp.MODELS_DIR, f"{base_name}_metadatas.json")
-    config_data = {
-        "training_losses": n_train_losses.tolist() if isinstance(n_train_losses, np.ndarray) else n_train_losses,
-        "warning_threshold": float(n_threshold),
-        "model_type": "Keras" if isinstance(model, keras.Model) else "PyTorch",
-        "date_saved": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    
-    with open(config_path, 'w', encoding='utf-8') as f:
-        json.dump(config_data, f, indent=4)
-                                      
-    #------------------------------
-    print(f"Saving model ...", end="", flush=True)
-
-    #---------------
-    if(isinstance(model, keras.Model)):
-        
-        model_path = os.path.join(stp.MODELS_DIR, f"{base_name}.keras")
-        model.save(model_path)
-
-    #---------------
-    elif isinstance(model, torch.nn.Module):
-        
-        model_path = os.path.join(stp.MODELS_DIR, f"{base_name}.pth")
-        torch.save(model.state_dict(), model_path)
-
-    #---------------
-    else:
-        print("Error model type not recognized")
-
-    print(f"Done ({model_path})")
-
-#================================================================================#
 def arg_parse() -> ap.Namespace:
 
     """
@@ -127,6 +58,63 @@ def arg_parse() -> ap.Namespace:
         print(f"\n#--------------- Plotting training curve : {args.plot} ---------------#\n")
 
     return args
+
+#================================================================================#
+def save_model(model, scaler: TransformerMixin, n_threshold : float, n_train_losses: np.ndarray, model_name: str = "") -> None:
+
+    """
+    Save a model (.keras for Keras, .pth for PyTorch) along with its scaler.
+    
+    Parameters
+    ----------
+    model           : the model to save (Keras or PyTorch)
+    scaler          : model's scaler tool
+    n_threshold     : threshold for damage detection
+    n_train_losses  : training losses
+    model_name      : name of the model 
+    """
+
+    #---------------------------------------------
+    os.makedirs(stp.MODELS_DIR, exist_ok=True)
+
+    if model_name == "":
+
+        sufix = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        base_name = f"model_{sufix}"
+
+    else:
+        base_name = f"{model_name}"
+
+    #------------------------------
+    print(f"Saving model's scaler ...", end="", flush=True)
+
+    scaler_path = os.path.join(stp.MODELS_DIR, f"{base_name}_scaler.pkl")
+
+    with open(scaler_path, 'wb') as file:
+        pickle.dump(scaler, file)
+
+    print(f"Done {scaler_path} \n")
+                                    
+    #------------------------------
+    print(f"Saving model ...", end="", flush=True)
+
+    #---------------
+    if(isinstance(model, keras.Model)):
+        
+        model_path = os.path.join(stp.MODELS_DIR, f"{base_name}.keras")
+        model.save(model_path)
+
+    #---------------
+    elif isinstance(model, torch.nn.Module):
+        
+        model_path = os.path.join(stp.MODELS_DIR, f"{base_name}.pth")
+        torch.save(model.state_dict(), model_path)
+
+    #---------------
+    else:
+        print("Error model type not recognized")
+
+    print(f"Done ({model_path})")
 
 #================================================================================#
 def load_model(model_path: str, 
