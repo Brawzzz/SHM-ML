@@ -21,6 +21,45 @@ import setup as stp
 #============================================================================================================================#
 #--------------------------------------------------------- FUNCTION ---------------------------------------------------------#
 #============================================================================================================================#
+def arg_parse() -> ap.Namespace:
+
+    """
+    Get the arguments and paths from the command line.
+
+    Returns
+    ----------
+    args : Object containing all parsed arguments.
+    """
+
+    #---------------------------------------------
+    parser = ap.ArgumentParser(description="SHM methods for damage detection and localization")
+    
+    parser.add_argument("-T", "--train", type=str, default=None, 
+                        help="Launch training phase with the given configuration file")
+
+    parser.add_argument("-t", "--test", type=int, default=None, 
+                        help="Launch testing phase on the corresponding signal index")
+    
+    parser.add_argument("-p", "--plot", type=str, default=None, 
+                        help="Path to the JSON file containing training losses for plotting")
+    
+    args = parser.parse_args()
+
+    #------------------------------
+    if args.train is not None:
+        print(f"\n#--------------- Training config file : {args.train} ---------------#\n")
+
+    #------------------------------
+    if args.test is not None:
+        print(f"\n#--------------- Testing signal index : {args.test} ---------------#\n")
+
+    #------------------------------
+    if args.plot is not None:
+        print(f"\n#--------------- Plotting training curve : {args.plot} ---------------#\n")
+
+    return args
+
+#================================================================================#
 def save_model(model, scaler: TransformerMixin, model_name: str = "") -> None:
 
     """
@@ -74,46 +113,6 @@ def save_model(model, scaler: TransformerMixin, model_name: str = "") -> None:
         pickle.dump(scaler, file)
     
     print(f"Done ({scaler_path})")
-
-
-#================================================================================#
-def arg_parse() -> ap.Namespace:
-
-    """
-    Get the arguments and paths from the command line.
-
-    Returns
-    ----------
-    args : Object containing all parsed arguments.
-    """
-
-    #---------------------------------------------
-    parser = ap.ArgumentParser(description="SHM methods for damage detection and localization")
-    
-    parser.add_argument("-T", "--train", type=str, default=None, 
-                        help="Launch training phase with the given configuration file")
-
-    parser.add_argument("-t", "--test", type=int, default=None, 
-                        help="Launch testing phase on the corresponding signal index")
-    
-    parser.add_argument("-p", "--plot", type=str, default=None, 
-                        help="Path to the JSON file containing training losses for plotting")
-    
-    args = parser.parse_args()
-
-    #------------------------------
-    if args.train is not None:
-        print(f"\n#--------------- Training config file : {args.train} ---------------#\n")
-
-    #------------------------------
-    if args.test is not None:
-        print(f"\n#--------------- Testing signal index : {args.test} ---------------#\n")
-
-    #------------------------------
-    if args.plot is not None:
-        print(f"\n#--------------- Plotting training curve : {args.plot} ---------------#\n")
-
-    return args
 
 #================================================================================#
 def load_model(model_path: str, 
